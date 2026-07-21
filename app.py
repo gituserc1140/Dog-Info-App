@@ -52,7 +52,11 @@ def fetch_all_breeds(api_key):
         return None, "A network error occurred while loading breeds. Please try again."
 
     if response.status_code == 200:
-        breeds = sorted(response.json(), key=lambda breed: (breed.get("name") or FALLBACK_BREED_NAME).lower())
+        normalized_breeds = []
+        for breed in response.json():
+            breed["display_name"] = breed.get("name") or FALLBACK_BREED_NAME
+            normalized_breeds.append(breed)
+        breeds = sorted(normalized_breeds, key=lambda breed: breed["display_name"].lower())
         return breeds, None
     if response.status_code in (401, 403):
         return None, "The API key is invalid or does not have access. Please verify your key."
@@ -112,10 +116,10 @@ def main():
     selected_breed = st.selectbox(
         "Select a dog breed",
         breeds,
-        format_func=lambda breed: breed.get("name", FALLBACK_BREED_NAME),
+        format_func=lambda breed: breed["display_name"],
     )
 
-    breed_name = selected_breed.get("name", FALLBACK_BREED_NAME)
+    breed_name = selected_breed["display_name"]
     image_url = selected_breed.get("image", {}).get("url")
     breed_id = selected_breed.get("id")
     if not image_url and breed_id:
