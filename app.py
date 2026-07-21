@@ -23,7 +23,7 @@ def fetch_dog_images(api_key, image_count):
     if response.status_code in (401, 403):
         return None, "The API key is invalid or does not have access. Please verify your key."
     if response.status_code == 429:
-        return None, "Rate limit reached for this API key. Please wait and try again."
+        return None, "Rate limit reached for this API key. Please wait before retrying and check your TheDogAPI plan limits."
     return None, f"Failed to fetch images: HTTP {response.status_code}"
 
 def main():
@@ -51,6 +51,10 @@ def main():
         images, error_message = fetch_dog_images(api_key, image_count)
         if error_message:
             st.error(error_message)
+            st.stop()
+
+        if not isinstance(images, list) or not images:
+            st.warning("No dog images were returned for this request. Please try again.")
             st.stop()
 
         for image in images:
