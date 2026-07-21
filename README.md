@@ -2,6 +2,7 @@
 
 Streamlit app for exploring dog images and breed details from [TheDogAPI](https://thedogapi.com/).
 
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://dog-info-app-hak4z4ymtcvtp4mktgrsug.streamlit.app/)
 [![GitHub Repo](https://img.shields.io/badge/GitHub-Repository-181717?logo=github&style=for-the-badge)](https://github.com/gituserc1140/Dog-Info-App)
 [![Sponsor on GitHub](https://img.shields.io/badge/Sponsor-GitHub-EA4AAA?logo=githubsponsors&style=for-the-badge)](https://github.com/sponsors/gituserc1140)
 
