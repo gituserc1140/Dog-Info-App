@@ -55,8 +55,12 @@ def fetch_all_breeds(api_key):
         normalized_breeds = []
         for breed in response.json():
             breed_name = breed.get("name")
-            breed["display_name"] = breed_name if breed_name else FALLBACK_BREED_NAME
-            normalized_breeds.append(breed)
+            normalized_breeds.append(
+                {
+                    **breed,
+                    "display_name": breed_name if breed_name else FALLBACK_BREED_NAME,
+                }
+            )
         breeds = sorted(normalized_breeds, key=lambda breed: breed["display_name"].lower())
         return breeds, None
     if response.status_code in (401, 403):
@@ -76,7 +80,7 @@ def fetch_breed_image(api_key, breed_id):
             images = response.json()
             if images:
                 return images[0].get("url"), None
-            return None, None
+            return None, "No image found for this breed."
         return None, f"Breed image lookup returned HTTP {response.status_code}"
     except requests.exceptions.Timeout:
         return None, "Breed image lookup timed out."
@@ -123,14 +127,18 @@ def main():
     breed_name = selected_breed["display_name"]
     image_url = selected_breed.get("image", {}).get("url")
     breed_id = selected_breed.get("id")
+    image_error = None
     if not image_url and breed_id:
         image_url, image_error = fetch_breed_image(api_key, breed_id)
         if image_error:
-            st.warning(image_error)
+            if image_error == "No image found for this breed.":
+                st.info(image_error)
+            else:
+                st.warning(image_error)
 
     if image_url:
         st.image(image_url, caption=breed_name)
-    else:
+    elif not image_error:
         st.info("No image is currently available for this breed.")
 
     st.subheader(breed_name)
