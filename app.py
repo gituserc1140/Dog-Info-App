@@ -51,7 +51,7 @@ def fetch_all_breeds(api_key):
         return None, "A network error occurred while loading breeds. Please try again."
 
     if response.status_code == 200:
-        breeds = sorted(response.json(), key=lambda breed: breed.get("name", "").lower())
+        breeds = sorted(response.json(), key=lambda breed: (breed.get("name") or "Unknown breed").lower())
         return breeds, None
     if response.status_code in (401, 403):
         return None, "The API key is invalid or does not have access. Please verify your key."
@@ -124,6 +124,8 @@ def main():
 
     if image_url:
         st.image(image_url, caption=breed_name)
+    else:
+        st.info("No image is currently available for this breed.")
 
     st.subheader(breed_name)
     st.write(f"**Temperament:** {selected_breed.get('temperament', 'Not available')}")
