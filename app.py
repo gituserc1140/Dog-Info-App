@@ -11,7 +11,13 @@ def fetch_dog_images(api_key, image_count):
         "x-api-key": api_key
     }
     params = {"limit": image_count, "has_breeds": 1}
-    response = requests.get(url, headers=headers, params=params, timeout=20)
+    try:
+        response = requests.get(url, headers=headers, params=params, timeout=20)
+    except requests.exceptions.Timeout:
+        return None, "The request timed out. Please try again."
+    except requests.exceptions.RequestException:
+        return None, "A network error occurred while fetching dog data. Please try again."
+
     if response.status_code == 200:
         return response.json(), None
     if response.status_code in (401, 403):
@@ -26,10 +32,11 @@ def main():
     st.caption("Explore dog photos and breed details using your own TheDogAPI key.")
 
     st.sidebar.header("Settings")
-    api_key = st.sidebar.text_input(
+    api_key_input = st.sidebar.text_input(
         "Enter your API Key from TheDogAPI",
         type="password",
-    ).strip()
+    )
+    api_key = api_key_input.strip()
     image_count = st.sidebar.slider("Number of dogs", min_value=1, max_value=10, value=3)
 
     st.sidebar.markdown("---")
