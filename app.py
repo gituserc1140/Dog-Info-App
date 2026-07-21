@@ -3,6 +3,7 @@ import requests
 
 GITHUB_REPO_URL = "https://github.com/gituserc1140/Dog-Info-App"
 GITHUB_SPONSOR_URL = "https://github.com/sponsors/gituserc1140"
+FALLBACK_BREED_NAME = "Unknown breed"
 
 
 def apply_custom_styles():
@@ -51,7 +52,7 @@ def fetch_all_breeds(api_key):
         return None, "A network error occurred while loading breeds. Please try again."
 
     if response.status_code == 200:
-        breeds = sorted(response.json(), key=lambda breed: (breed.get("name") or "Unknown breed").lower())
+        breeds = sorted(response.json(), key=lambda breed: (breed.get("name") or FALLBACK_BREED_NAME).lower())
         return breeds, None
     if response.status_code in (401, 403):
         return None, "The API key is invalid or does not have access. Please verify your key."
@@ -111,10 +112,10 @@ def main():
     selected_breed = st.selectbox(
         "Select a dog breed",
         breeds,
-        format_func=lambda breed: breed.get("name", "Unknown breed"),
+        format_func=lambda breed: breed.get("name", FALLBACK_BREED_NAME),
     )
 
-    breed_name = selected_breed.get("name", "Unknown breed")
+    breed_name = selected_breed.get("name", FALLBACK_BREED_NAME)
     image_url = selected_breed.get("image", {}).get("url")
     breed_id = selected_breed.get("id")
     if not image_url and breed_id:
