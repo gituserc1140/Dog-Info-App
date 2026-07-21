@@ -3,6 +3,8 @@ import requests
 
 GITHUB_REPO_URL = "https://github.com/gituserc1140/Dog-Info-App"
 GITHUB_SPONSOR_URL = "https://github.com/sponsors/gituserc1140"
+FALLBACK_BREED_NAME = "Unknown breed"
+NO_IMAGE_FOUND_MESSAGE = "No image found for this breed."
 
 
 def apply_custom_styles():
@@ -39,40 +41,55 @@ def apply_custom_styles():
     )
 
 
-def fetch_dog_images(api_key, image_count):
-    url = "https://api.thedogapi.com/v1/images/search"
-    headers = {
-        "x-api-key": api_key
-    }
-    params = {"limit": image_count, "has_breeds": 1}
+@st.cache_data(show_spinner=False)
+def fetch_all_breeds(api_key):
+    url = "https://api.thedogapi.com/v1/breeds"
+    headers = {"x-api-key": api_key}
     try:
-        response = requests.get(url, headers=headers, params=params, timeout=10)
+        response = requests.get(url, headers=headers, timeout=10)
     except requests.exceptions.Timeout:
-        return None, "The request timed out. Please try again."
+        return None, "The request timed out while loading breeds. Please try again."
     except requests.exceptions.RequestException:
-        return None, "A network error occurred while fetching dog data. Please try again."
+        return None, "A network error occurred while loading breeds. Please try again."
 
     if response.status_code == 200:
-        return response.json(), None
+        normalized_breeds = []
+        for breed in response.json():
+            breed_name = breed.get("name")
+            normalized_breeds.append(
+                {
+                    **breed,
+                    "display_name": breed_name if breed_name else FALLBACK_BREED_NAME,
+                }
+            )
+        breeds = sorted(normalized_breeds, key=lambda breed: breed["display_name"].lower())
+        return breeds, None
     if response.status_code in (401, 403):
         return None, "The API key is invalid or does not have access. Please verify your key."
     if response.status_code == 429:
         return None, "Rate limit reached for this API key. Please wait before retrying and check your TheDogAPI plan limits."
-    return None, f"Failed to fetch images: HTTP {response.status_code}"
+    return None, f"Failed to fetch breeds: HTTP {response.status_code}"
 
 
-def fetch_breed_by_id(api_key, breed_id):
-    url = f"https://api.thedogapi.com/v1/breeds/{breed_id}"
+def fetch_breed_image(api_key, breed_id):
+    if not breed_id:
+        return None, "Invalid breed ID."
+
+    url = "https://api.thedogapi.com/v1/images/search"
     headers = {"x-api-key": api_key}
+    params = {"breed_ids": breed_id, "limit": 1, "has_breeds": 1}
     try:
-        response = requests.get(url, headers=headers, timeout=10)
+        response = requests.get(url, headers=headers, params=params, timeout=10)
         if response.status_code == 200:
-            return response.json(), None
-        return None, f"Breed lookup returned HTTP {response.status_code}"
+            images = response.json()
+            if images:
+                return images[0].get("url"), None
+            return None, NO_IMAGE_FOUND_MESSAGE
+        return None, f"Breed image lookup returned HTTP {response.status_code}"
     except requests.exceptions.Timeout:
-        return None, "Breed lookup timed out."
+        return None, "Breed image lookup timed out."
     except requests.exceptions.RequestException as exc:
-        return None, f"Breed lookup failed: {exc}"
+        return None, f"Breed image lookup failed: {exc}"
 
 
 def main():
@@ -87,7 +104,6 @@ def main():
         type="password",
     )
     api_key = api_key_input.strip()
-    image_count = st.sidebar.slider("Number of dog images", min_value=1, max_value=10, value=3)
 
     st.sidebar.markdown("---")
     st.sidebar.markdown(f"[![GitHub Repo](https://img.shields.io/badge/GitHub-Repository-181717?logo=github&style=for-the-badge)]({GITHUB_REPO_URL})")
@@ -97,41 +113,43 @@ def main():
         st.info("Enter your TheDogAPI key in the sidebar to begin.")
         st.stop()
 
-    if st.button("Fetch Dog Info"):
-        images, error_message = fetch_dog_images(api_key, image_count)
-        if error_message:
-            st.error(error_message)
-            st.stop()
+    breeds, error_message = fetch_all_breeds(api_key)
+    if error_message:
+        st.error(error_message)
+        st.stop()
 
-        if not isinstance(images, list) or not images:
-            st.warning("No dog images were returned for this request. Please try again.")
-            st.stop()
+    if not isinstance(breeds, list) or not breeds:
+        st.warning("No breeds were returned. Please try again.")
+        st.stop()
 
-        for image in images:
-            breeds = image.get("breeds", [])
+    selected_breed = st.selectbox(
+        "Select a dog breed",
+        breeds,
+        format_func=lambda breed: breed["display_name"],
+    )
 
-            # Fallback: if breeds list is empty and a breed_ids field is present
-            # (returned by some TheDogAPI responses), fetch breed info by ID.
-            if not breeds:
-                breed_ids = image.get("breed_ids") or []
-                if breed_ids:
-                    breed_info, lookup_error = fetch_breed_by_id(api_key, breed_ids[0])
-                    if breed_info:
-                        breeds = [breed_info]
-                    elif lookup_error:
-                        st.warning(f"Could not load breed details for one image: {lookup_error}")
-
-            if breeds:
-                breed = breeds[0]
-                st.image(image["url"], caption=breed.get("name", "Dog image"))
-                st.subheader(breed.get("name", "Unknown breed"))
-                st.write(f"**Temperament:** {breed.get('temperament', 'Not available')}")
-                st.write(f"**Life span:** {breed.get('life_span', 'Not available')}")
-                st.write(f"**Bred for:** {breed.get('bred_for', 'Not available')}")
+    breed_name = selected_breed["display_name"]
+    image_url = selected_breed.get("image", {}).get("url")
+    breed_id = selected_breed.get("id")
+    image_error = None
+    if not image_url and breed_id:
+        image_url, image_error = fetch_breed_image(api_key, breed_id)
+        if image_error:
+            if image_error == NO_IMAGE_FOUND_MESSAGE:
+                st.info(image_error)
             else:
-                st.image(image["url"])
-                st.write("Breed details are not available for this image.")
-            st.markdown("---")
+                st.warning(image_error)
+
+    if image_url:
+        st.image(image_url, caption=breed_name)
+    elif not image_error:
+        st.info("No image is currently available for this breed.")
+
+    st.subheader(breed_name)
+    st.write(f"**Temperament:** {selected_breed.get('temperament', 'Not available')}")
+    st.write(f"**Life span:** {selected_breed.get('life_span', 'Not available')}")
+    st.write(f"**Bred for:** {selected_breed.get('bred_for', 'Not available')}")
+    st.markdown("---")
 
 if __name__ == "__main__":
     main()

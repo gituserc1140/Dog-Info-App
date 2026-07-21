@@ -8,7 +8,7 @@ Streamlit app for exploring dog images and breed details from [TheDogAPI](https:
 ## What the app does
 
 - Lets users enter their own TheDogAPI key directly in the Streamlit UI
-- Fetches dog images and shows related breed information
+- Lets users choose a breed from a dropdown and view related breed information
 - Handles invalid keys and rate limits with clear feedback
 
 ## How to use
@@ -24,7 +24,7 @@ Streamlit app for exploring dog images and breed details from [TheDogAPI](https:
    ```
 4. Open the app in your browser.
 5. Enter your TheDogAPI key in the sidebar.
-6. Choose how many dogs to fetch and click **Fetch Dog Info**.
+6. Pick a breed from the dropdown to view its details and image.
 
 ## API key
 
