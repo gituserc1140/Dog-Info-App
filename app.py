@@ -4,6 +4,7 @@ import requests
 GITHUB_REPO_URL = "https://github.com/gituserc1140/Dog-Info-App"
 GITHUB_SPONSOR_URL = "https://github.com/sponsors/gituserc1140"
 FALLBACK_BREED_NAME = "Unknown breed"
+NO_IMAGE_FOUND_MESSAGE = "No image found for this breed."
 
 
 def apply_custom_styles():
@@ -58,7 +59,7 @@ def fetch_all_breeds(api_key):
             normalized_breeds.append(
                 {
                     **breed,
-                    "display_name": breed_name if breed_name else FALLBACK_BREED_NAME,
+                    "display_name": breed_name if breed_name is not None else FALLBACK_BREED_NAME,
                 }
             )
         breeds = sorted(normalized_breeds, key=lambda breed: breed["display_name"].lower())
@@ -80,7 +81,7 @@ def fetch_breed_image(api_key, breed_id):
             images = response.json()
             if images:
                 return images[0].get("url"), None
-            return None, "No image found for this breed."
+            return None, NO_IMAGE_FOUND_MESSAGE
         return None, f"Breed image lookup returned HTTP {response.status_code}"
     except requests.exceptions.Timeout:
         return None, "Breed image lookup timed out."
@@ -131,7 +132,7 @@ def main():
     if not image_url and breed_id:
         image_url, image_error = fetch_breed_image(api_key, breed_id)
         if image_error:
-            if image_error == "No image found for this breed.":
+            if image_error == NO_IMAGE_FOUND_MESSAGE:
                 st.info(image_error)
             else:
                 st.warning(image_error)
