@@ -59,7 +59,7 @@ def fetch_all_breeds(api_key):
             normalized_breeds.append(
                 {
                     **breed,
-                    "display_name": breed_name if breed_name is not None else FALLBACK_BREED_NAME,
+                    "display_name": breed_name if breed_name else FALLBACK_BREED_NAME,
                 }
             )
         breeds = sorted(normalized_breeds, key=lambda breed: breed["display_name"].lower())
@@ -72,6 +72,9 @@ def fetch_all_breeds(api_key):
 
 
 def fetch_breed_image(api_key, breed_id):
+    if not breed_id:
+        return None, "Invalid breed ID."
+
     url = "https://api.thedogapi.com/v1/images/search"
     headers = {"x-api-key": api_key}
     params = {"breed_ids": breed_id, "limit": 1, "has_breeds": 1}
