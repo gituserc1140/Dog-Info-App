@@ -5,6 +5,40 @@ GITHUB_REPO_URL = "https://github.com/gituserc1140/Dog-Info-App"
 GITHUB_SPONSOR_URL = "https://github.com/sponsors/gituserc1140"
 
 
+def apply_custom_styles():
+    st.markdown(
+        """
+        <style>
+        .stApp {
+            background-color: #FFF8F0;
+        }
+        h1, h2, h3 {
+            color: #7B4F2E;
+        }
+        .stButton > button {
+            background-color: #C17F53;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.5rem 1.5rem;
+            font-weight: bold;
+        }
+        .stButton > button:hover {
+            background-color: #A6663E;
+            color: white;
+        }
+        [data-testid="stSidebar"] {
+            background-color: #F5E6D3;
+        }
+        hr {
+            border-color: #D4A57A;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def fetch_dog_images(api_key, image_count):
     url = "https://api.thedogapi.com/v1/images/search"
     headers = {
@@ -26,8 +60,24 @@ def fetch_dog_images(api_key, image_count):
         return None, "Rate limit reached for this API key. Please wait before retrying and check your TheDogAPI plan limits."
     return None, f"Failed to fetch images: HTTP {response.status_code}"
 
+
+def fetch_breed_by_id(api_key, breed_id):
+    url = f"https://api.thedogapi.com/v1/breeds/{breed_id}"
+    headers = {"x-api-key": api_key}
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        if response.status_code == 200:
+            return response.json(), None
+        return None, f"Breed lookup returned HTTP {response.status_code}"
+    except requests.exceptions.Timeout:
+        return None, "Breed lookup timed out."
+    except requests.exceptions.RequestException as exc:
+        return None, f"Breed lookup failed: {exc}"
+
+
 def main():
     st.set_page_config(page_title="Dog Info App", page_icon="🐶", layout="centered")
+    apply_custom_styles()
     st.title("🐶 Dog Info App")
     st.caption("Explore dog photos and breed details using your own TheDogAPI key.")
 
@@ -59,6 +109,18 @@ def main():
 
         for image in images:
             breeds = image.get("breeds", [])
+
+            # Fallback: if breeds list is empty and a breed_ids field is present
+            # (returned by some TheDogAPI responses), fetch breed info by ID.
+            if not breeds:
+                breed_ids = image.get("breed_ids") or []
+                if breed_ids:
+                    breed_info, lookup_error = fetch_breed_by_id(api_key, breed_ids[0])
+                    if breed_info:
+                        breeds = [breed_info]
+                    elif lookup_error:
+                        st.warning(f"Could not load breed details for one image: {lookup_error}")
+
             if breeds:
                 breed = breeds[0]
                 st.image(image["url"], caption=breed.get("name", "Dog image"))
