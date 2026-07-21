@@ -39,6 +39,7 @@ def apply_custom_styles():
     )
 
 
+@st.cache_data(show_spinner=False)
 def fetch_all_breeds(api_key):
     url = "https://api.thedogapi.com/v1/breeds"
     headers = {"x-api-key": api_key}
@@ -50,7 +51,8 @@ def fetch_all_breeds(api_key):
         return None, "A network error occurred while loading breeds. Please try again."
 
     if response.status_code == 200:
-        return response.json(), None
+        breeds = sorted(response.json(), key=lambda breed: breed.get("name", "").lower())
+        return breeds, None
     if response.status_code in (401, 403):
         return None, "The API key is invalid or does not have access. Please verify your key."
     if response.status_code == 429:
@@ -106,17 +108,17 @@ def main():
         st.warning("No breeds were returned. Please try again.")
         st.stop()
 
-    sorted_breeds = sorted(breeds, key=lambda breed: breed.get("name", "").lower())
     selected_breed = st.selectbox(
         "Select a dog breed",
-        sorted_breeds,
+        breeds,
         format_func=lambda breed: breed.get("name", "Unknown breed"),
     )
 
     breed_name = selected_breed.get("name", "Unknown breed")
     image_url = selected_breed.get("image", {}).get("url")
-    if not image_url and selected_breed.get("id"):
-        image_url, image_error = fetch_breed_image(api_key, selected_breed["id"])
+    breed_id = selected_breed.get("id")
+    if not image_url and breed_id:
+        image_url, image_error = fetch_breed_image(api_key, breed_id)
         if image_error:
             st.warning(image_error)
 
