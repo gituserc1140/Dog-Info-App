@@ -54,7 +54,8 @@ def fetch_all_breeds(api_key):
     if response.status_code == 200:
         normalized_breeds = []
         for breed in response.json():
-            breed["display_name"] = breed.get("name") or FALLBACK_BREED_NAME
+            breed_name = breed.get("name")
+            breed["display_name"] = breed_name if breed_name else FALLBACK_BREED_NAME
             normalized_breeds.append(breed)
         breeds = sorted(normalized_breeds, key=lambda breed: breed["display_name"].lower())
         return breeds, None
